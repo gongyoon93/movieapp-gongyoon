@@ -9,18 +9,28 @@ function Landingpage() {
  
   const [Movies, setMovies] = useState([]);
   const [MainMovieImage, setMainMovieImage] = useState(null);
-  console.log('e32');
+  const [CurrentPage, setCurrentpage] = useState(0);
+  
   useEffect(() => {
     const endpoint = `${API_URL}movie/popular?api_key=${API_KEY}&language=${MOVIE_LANGUAGE}&page=1`;
-
-    fetch(endpoint)
-    .then(res => res.json())
-    .then(res => {
-       setMovies([...Movies, ...res.results]);
-       setMainMovieImage(res.results[0]);
-    });
-
+    fetchMovies(endpoint);
   }, []);
+
+
+  const fetchMovies = (endpoint) => {
+      fetch(endpoint)
+      .then(res => res.json())
+      .then(res => {
+        setMovies([...Movies, ...res.results]);
+        setMainMovieImage(res.results[0]);
+        setCurrentpage(res.page);
+      });
+  };
+
+  const loadMoreItems = () => {
+    const endpoint = `${API_URL}movie/popular?api_key=${API_KEY}&language=${MOVIE_LANGUAGE}&page=${CurrentPage +1}`;
+    fetchMovies(endpoint);
+  };
 
   return (
     <div style={{ width: '100%', margin: '0' }}>
@@ -60,7 +70,7 @@ function Landingpage() {
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'center',}}>
-        <button>불러오기</button>
+        <button onClick={loadMoreItems}>불러오기</button>
       </div>
 
     </div>
