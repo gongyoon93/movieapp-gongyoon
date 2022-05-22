@@ -1,116 +1,62 @@
 const express = require('express')
 const app = express()
 
+const path = require("path");
+const cors = require('cors')
+
 const bodyParser = require('body-parser');
 
 const cookieParser = require('cookie-parser');
 
 const config = require('./server/config/key');
+// const mongoose = require("mongoose");
+// mongoose
+//   .connect(config.mongoURI, { useNewUrlParser: true })
+//   .then(() => console.log("DB connected"))
+//   .catch(err => console.error(err));
 
-const { auth } = require('./server/middleware/auth');
-
-const { User } = require('./server/models/User');
-
-app.use(cookieParser());
-
-//client에서 보낸 application/x-www-form-urlencoded를 분석해서 가져옴
-app.use(bodyParser.urlencoded({extend: true}));
-
-//application/json
-app.use(bodyParser.json()); 
-
-//mongoDB와 app을 연결
-const mongoose = require('mongoose')
-mongoose.connect(config.mongoURI,{
-  useNewUrlParser: true, useUnifiedTopology: true
-}).then(() => console.log('MongoDB connected'))
+const mongoose = require("mongoose");
+const connect = mongoose.connect(config.mongoURI,
+  {
+    useNewUrlParser: true, useUnifiedTopology: true,
+  })
+  .then(() => console.log('MongoDB Connected...'))
   .catch(err => console.log(err));
 
-app.get('/', (req, res) => {
-  res.send('Hi everyone')
-})
+app.use(cors())
 
-app.get('/api/hello', (req, res) => {
-    res.send("안녕하세요.");
-});
+//to not get any deprecation warning or error
+//support parsing of application/x-www-form-urlencoded post data
+app.use(bodyParser.urlencoded({ extended: true }));
+//to get json data
+// support parsing of application/json type post data
+app.use(bodyParser.json());
+app.use(cookieParser());
 
-app.post('/api/users/register', (req, res) => {
+app.use('/api/users', require('./server/routes/users'));
+// app.use('/api/favorite', require('./routes/favorite'));
+// app.use('/api/comment', require('./routes/comment'));
+// app.use('/api/like', require('./routes/like'));
 
-  // 회원가입시 필요한 정보들을 client에 서 가져오면
-  // DB에 저장
 
-    const user = new User(req.body);
+//use this to show the image you have in node js server to client (react js)
+//https://stackoverflow.com/questions/48914987/send-image-path-from-node-js-express-server-to-react-client
+app.use('/uploads', express.static('uploads'));
 
-    user.save((err, userInfo) => {
-      if(err) return res.json({ successs: false, err});
-      //request 요청 수행 완료(200)
-      return res.status(200).json({
-        success: true
-      })
-    });
-});
+// Serve static assets if in production
+if (process.env.NODE_ENV === "production") {
 
-app.post('/api/users/login', (req, res) => {
-   
-  //요청된 이메일을 DB에서 있는지 찾는다.
-  User.findOne({email: req.body.email}, (err, user) => {
-    if(!user){
-        return res.json({
-          loginSuccess: false,
-          message: "제공된 이메일에 해당하는 유저가 없습니다."
-        });
-    }
-    
-    //요청된 이메일이 DB에 있다면 비밀번호가 맞는 비밀번호인지 확인.
+  // Set static folder
+  app.use(express.static("client/build"));
 
-    user.comparePassword(req.body.password, (err, isMatch) => {
-        if(err) console.log(err);
-        if(!isMatch)
-        return res.json({loginSuccess: false, message: "비밀번호가 틀렸습니다."});
-
-        user.generateToken((err, user) => {
-          if(err) return res.status(400).send(err);
-
-          //토큰을 저장함(쿠키)
-          res.cookie("x_auth",user.token)
-          .status(200)
-          .json({loginSuccess: true, userId: user._id});
-        });
-    })
+  // index.html for all page routes
+  app.get("*", (req, res) => {
+    res.sendFile(path.resolve(__dirname, "../client", "build", "index.html"));
   });
+}
 
-});
-
-app.get('/api/users/auth', auth, (req, res) => {
-    //여기까지 미들웨어를 통과해 왔다는건 Authentication이 True
-    res.status(200).json({
-      _id: req.user._id,
-      isAdmin: req.user.role === 0 ? false : true,
-      isAuth: true,
-      email: req.user.email,
-      name: req.user.name,
-      lastname: req.user.lastname,
-      role: req.user.role,
-      image: req.user.image
-    });
-});
-
-app.get('/api/users/logout', auth, (req, res) => {
-    User.findOneAndUpdate({_id: req.user._id},
-      { token: ""},
-      (err, user) => {
-        if(err) return res.json({sucess: false, err});
-        return res.status(200).send({
-          success: true
-        });
-      }
-      )
-});
-
-const port = 5000;
+const port = process.env.PORT || 5000
 
 app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`)
-})
-
-  
+  console.log(`Server Running at ${port}`)
+});
