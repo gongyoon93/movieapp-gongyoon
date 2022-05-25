@@ -14,12 +14,21 @@ function Favorite(props) {
         movieId
     };
     useEffect(() => {
-        Axios.post('/api/favoriteNumber', variables)
+        Axios.post('/api/favorite/favoriteNumber', variables)
         .then(res => {
             if(res.data.success){
-
+                
             } else {
                 alert('좋아요 정보를 가져오는데 실패하였습니다.');
+            }
+        });
+
+        Axios.post('/api/favorite/favorited', variables)
+        .then(res => {
+            if(res.data.success){
+                
+            } else {
+                alert('정보를 가져오는데 실패하였습니다.');
             }
         });
     }, []);
